@@ -8,7 +8,7 @@ from treys import Deck, Evaluator, Card
 SMALL_BLIND = 5
 BIG_BLIND = 10
 INITIAL_STACK = 1000
-NUM_OPPONENTS = 5
+NUM_OPPONENTS = 1
 MC_SIMS = 500
 NUM_PLAYERS = NUM_OPPONENTS + 1
 
@@ -34,10 +34,22 @@ class Player:
 class RandomPlayer(Player):
     def decide(self, valid_actions, hole, board, pot, to_call):
         action = random.choice(valid_actions)
-        if action == 'fold': return 'fold', 0
-        if action == 'call': return 'call', to_call
+        print("---villain---")
+        Card.print_pretty_cards(hole)
+        Card.print_pretty_cards(board)
+        print(action)
+        if action == 'fold':
+            print("fold")
+            return 'fold', 0
+        if action == 'check':
+            print("check")
+            return 'check', 0
+        if action == 'call':
+            print(f"call {to_call}")
+            return 'call', to_call
         # minimal raise = to_call + BIG_BLIND
         raise_amt = min(self.stack, to_call + BIG_BLIND)
+        print(f"raise {raise_amt}")
         return 'raise', raise_amt
 
 class BaselineBot(Player):
@@ -50,14 +62,25 @@ class BaselineBot(Player):
         eq = self.estimate_equity(hole, board)
         # compute simple EVs
         ev_fold = 0
-        ev_call = eq * (pot + to_call) - (1 - eq) * to_call
+        winning_odds, losing_odds = eq, 1 - eq
+        ev_call = winning_odds * (pot + to_call) - losing_odds * to_call
+        print("---hero---")
+        Card.print_pretty_cards(hole)
+        Card.print_pretty_cards(board)
         raise_amt = min(self.stack, to_call + BIG_BLIND)
         ev_raise = eq * (pot + raise_amt) - (1 - eq) * raise_amt
+        print(f"  equity = {eq:.2f}, ev_call = {ev_call:.2f}, to_call = {to_call}, ev_raise = {ev_raise:.2f}, raise_amt = {raise_amt}")
         # choose best
         if ev_raise >= ev_call and ev_raise >= ev_fold:
+            print(f"  raise {raise_amt}")
             return 'raise', raise_amt
-        if ev_call >= ev_fold:
+        if ev_call >= ev_fold and to_call > 0:
+            print(f"  call {to_call}")
             return 'call', to_call
+        if to_call == 0:
+            print("  check")
+            return 'check', 0
+        print("  fold")
         return 'fold', 0
 
     def estimate_equity(self, hole, board):
@@ -119,8 +142,11 @@ class Game:
             for p in self.players:
                 if not p.in_hand: continue
                 valid = ['fold','call','raise']
+                if to_call == 0:
+                    valid = ['check', 'raise']
                 action, amt = p.decide(valid, p.hole, board, pot, to_call)
                 if action == 'fold': p.in_hand = False
+                elif action == 'check': continue
                 else:
                     bet = min(p.stack, amt)
                     p.stack -= bet
@@ -135,7 +161,7 @@ class Game:
         winner = min(scores, key=scores.get)
         winner.stack += pot
 
-    def run(self, num_hands=100):
+    def run(self, num_hands=20):
         for _ in range(num_hands):
             self.play_hand()
             self.rotate_dealer()
@@ -148,4 +174,4 @@ if __name__ == '__main__':
     bot = BaselineBot('Bot')
     opponents = [RandomPlayer(f'R{i}') for i in range(NUM_OPPONENTS)]
     game = Game([bot] + opponents)
-    game.run(num_hands=50)  # simulate 50 hands
+    game.run(num_hands=1)  # simulate 50 hands
