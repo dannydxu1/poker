@@ -43,6 +43,33 @@ class FishPlayer(BasePokerPlayer):  # Do not forget to make parent class as "Bas
     def receive_round_result_message(self, winners, hand_info, round_state):
         pass
 
+class RampagePlayer(BasePokerPlayer):
+    def declare_action(self, valid_actions, hole_card, round_state):
+        print("fish cards")
+        Card.print_pretty_cards(to_treys(hole_card))
+        decision = random.randint(2,2)
+        action, amount = valid_actions[decision]["action"], valid_actions[decision]["amount"]
+        pot_size = round_state['pot']['main']['amount']
+        if action == "raise":
+            amount = amount["max"]
+        print(action)
+        return action, amount   # action returned here is sent to the poker engine
+
+    def receive_game_start_message(self, game_info):
+        pass
+
+    def receive_round_start_message(self, round_count, hole_card, seats):
+        pass
+
+    def receive_street_start_message(self, street, round_state):
+        pass
+
+    def receive_game_update_message(self, action, round_state):
+        pass
+
+    def receive_round_result_message(self, winners, hand_info, round_state):
+        pass
+
 class MCPlayer(BasePokerPlayer):  # Do not forget to make parent class as "BasePokerPlayer"
     #  we define the logic to make an action through this method. (so this method would be the core of your AI)
     def declare_action(self, valid_actions, hole_card, round_state):
@@ -80,7 +107,8 @@ class MCPlayer(BasePokerPlayer):  # Do not forget to make parent class as "BaseP
         if to_call == BIG_BLIND and eq < 0.40:
                 print(f"open folding due  to pot odds: {eq:.2f} chance of winning with {pot_odds:.2f} odds")
                 return 'fold', 0
-        if to_call > BIG_BLIND and eq < pot_odds*0.9:
+        if to_call > BIG_BLIND and eq < pot_odds*0.67:
+            print(eq, pot_odds*0.67)
             print(f"folding due to pot odds: {eq:.2f} chance of winning with {pot_odds:.2f} odds")
             return 'fold', 0
     
@@ -133,7 +161,7 @@ def to_treys(cards):
     return ret
 
 if __name__ == '__main__':
-    config = setup_config(max_round=10, initial_stack=INITIAL_STACK, small_blind_amount=SMALL_BLIND)
-    config.register_player(name="FishPlayer", algorithm=FishPlayer())
+    config = setup_config(max_round=1000, initial_stack=INITIAL_STACK, small_blind_amount=SMALL_BLIND)
+    config.register_player(name="RampagePlayer", algorithm=RampagePlayer())
     config.register_player(name="MCPlayer", algorithm=MCPlayer())
     game_result = start_poker(config)
