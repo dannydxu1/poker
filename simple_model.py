@@ -4,6 +4,7 @@ import os
 import json
 import numpy as np
 from tqdm import tqdm 
+import tensorflow as tf
 
 RANKS = '23456789TJQKA'
 SUITS = 'hdcs'
@@ -162,3 +163,39 @@ if __name__ == "__main__":
 
     print("Built dataset:", X.shape, y.shape)
     # → now you can split and wrap in a DataLoader for training your PyTorch model
+
+    print("1) Build a tf.data.Dataset")
+    batch_size = 128
+    dataset = tf.data.Dataset.from_tensor_slices((X, y))
+    dataset = dataset.shuffle(buffer_size=len(X), seed=42)
+    dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+    print("2) Split into train/val")
+    total = len(X)
+    train_ds = dataset.take(int(0.8 * total / batch_size))
+    val_ds   = dataset.skip(int(0.8 * total / batch_size))
+
+    print("3) Define a Keras model")
+    D_state = X.shape[1]
+    model = tf.keras.Sequential([
+        tf.keras.Input(shape=(D_state,)),
+        tf.keras.layers.Dense(256, activation='relu'),
+        tf.keras.layers.Dense(256, activation='relu'),
+        tf.keras.layers.Dense(3, activation='softmax'),   # 3 actions: fold/call/raise
+    ])
+
+    print("4) Compile")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(1e-4),
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy'],
+    )
+
+    print("5) Train")
+    history = model.fit(
+        train_ds,
+        validation_data=val_ds,
+        epochs=200,
+    )
+
+    model.save('poker_bot_200.h5')
