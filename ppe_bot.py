@@ -162,6 +162,6 @@ def to_treys(cards):
 
 if __name__ == '__main__':
     config = setup_config(max_round=1000, initial_stack=INITIAL_STACK, small_blind_amount=SMALL_BLIND)
-    config.register_player(name="RampagePlayer", algorithm=RampagePlayer())
-    config.register_player(name="MCPlayer", algorithm=MCPlayer())
+    config.register_player(name="Villain", algorithm=MCPlayer())
+    config.register_player(name="Hero", algorithm=MCPlayer())
     game_result = start_poker(config)
